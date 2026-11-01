@@ -1,0 +1,24 @@
+description: Ultralytics YOLO26n model trained on PCB DEFECT DETECTION ULTRA.v5i.yolo26\data.yaml
+author: Ultralytics
+date: '2026-11-01T21:42:17.671790+05:30'
+version: 8.4.188
+license: AGPL-3.0 License (https://ultralytics.com/license)
+docs: https://docs.ultralytics.com
+stride: 32
+task: detect
+head: Detect
+batch: 1
+imgsz:
+- 640
+- 640
+names:
+  0: Missing_Hole
+  1: MouseBite
+  2: Open_Circuit
+  3: Short_Circuit
+  4: Spur
+  5: Spurious_Cooper
+args:
+  batch: 1
+channels: 3
+end2end: false
