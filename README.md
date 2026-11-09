@@ -1,48 +1,50 @@
 # PCB Fault Detector
 
-**AI-Based PCB Defect Detection Using YOLO26n, NCNN and Raspberry Pi 4**
+**AI-Based PCB Defect Detection Using YOLO26n, NCNN and ExecuTorch on Raspberry Pi 4**
 
-## Introduction
+## 1. The Problem We Are Solving
 
-Printed Circuit Boards (PCBs) are essential components of almost every electronic device. During manufacturing, defects such as broken connections, missing holes, unwanted copper formations and short circuits can affect the reliability of electronic products.
+Printed Circuit Boards (PCBs) are essential components of electronic devices. During manufacturing, defects such as missing holes, broken connections, unwanted copper formations and short circuits can affect the reliability of the final product.
 
-Traditional manual inspection can be time-consuming and inconsistent, especially when production volumes are high. Small defects may go unnoticed, resulting in defective products, material wastage and increased manufacturing costs.
+Manual PCB inspection can be time-consuming and inconsistent, particularly when production volumes are high. Small defects may go unnoticed, resulting in material wastage, increased costs and defective products.
 
-Our project aims to address this problem by developing an AI-based PCB inspection system that automatically detects and localizes manufacturing defects. We use computer vision and edge computing to perform inspection directly on Raspberry Pi 4, making the system less dependent on expensive computing infrastructure or cloud services.
+Our project aims to address this problem through an AI-powered visual inspection system. We use computer vision to automatically identify and locate PCB defects, making quality inspection faster and more consistent.
 
-## Hardware and System Setup
+Our approach focuses on running the detection system directly on affordable edge hardware rather than depending on cloud-based processing or expensive computing infrastructure.
+
+## 2. Hardware Setup
 
 **Raspberry Pi 4**
 
-We use Raspberry Pi 4 as the main computing unit. It is powered by the Broadcom BCM2711 processor, which uses a quad-core 64-bit ARM Cortex-A72 architecture.
+We use Raspberry Pi 4 as the main computing device. It is powered by the Broadcom BCM2711 processor, which uses a quad-core 64-bit ARM Cortex-A72 architecture.
 
-Since Raspberry Pi 4 uses an ARM-based processor, it provides a compact and relatively low-power platform for deploying AI applications. It also supports camera connectivity and Python-based computer vision libraries.
+Since Raspberry Pi 4 is ARM-based, it provides a compact and low-power platform for deploying AI applications. Its camera interface and Linux support make it suitable for our edge-based inspection system.
 
 **Raspberry Pi Camera Module**
 
-The camera captures PCB images continuously using the Picamera2 library. These frames are passed to the detection pipeline for processing and defect identification.
+The camera captures PCB images using the Picamera2 library. These images are passed to the detection pipeline for processing and defect identification.
 
-## Object Detection Using YOLO26n
+## 3. PCB Defect Detection Using YOLO26n
 
-We use YOLO26n from Ultralytics for detecting PCB defects.
+We use YOLO26n from Ultralytics for object detection.
 
-YOLO (You Only Look Once) is an object detection approach that identifies objects and their locations within an image. Unlike image classification, it can detect multiple defects in a single PCB image and mark each one using a bounding box.
+YOLO (You Only Look Once) identifies objects and their locations within an image. Unlike image classification, it can detect multiple defects in a single PCB image and mark each one using a bounding box.
 
-At a high level, the detection architecture consists of three components:
+At a high level, its architecture consists of three components:
 
-- **Backbone:** Extracts important visual features such as edges, textures and patterns.
+- **Backbone:** Extracts visual features such as edges, textures and patterns.
 - **Neck:** Combines features at different resolutions to help detect defects of different sizes.
-- **Detection Head:** Predicts defect categories, bounding-box coordinates and confidence scores.
+- **Detection Head:** Predicts defect categories, bounding boxes and confidence scores.
 
-We selected YOLO26n to explore lightweight object detection on resource-constrained hardware.
+Our model is trained to detect six PCB defect categories.
 
-## Dataset and Training
+## 4. PCB Defect Categories
 
-We use the PCB Defect Detection Ultra dataset from Roboflow Universe.
+The following images illustrate the six types of manufacturing defects considered in our project.
 
-Dataset: https://universe.roboflow.com/cnn-pcb-defect-detection/pcb-defect-detection-ultra
+![PCB Defect Categories](assets/pcb-defect-categories.png)
 
-The model is trained to detect six types of PCB defects:
+The model detects:
 
 1. Missing Hole
 2. MouseBite
@@ -51,9 +53,15 @@ The model is trained to detect six types of PCB defects:
 5. Spur
 6. Spurious Copper
 
-Training is performed using Python and the Ultralytics framework. We initialize YOLO26n using its model configuration and train it on the annotated PCB dataset.
+## 5. Dataset and Model Training
 
-Our training configuration includes:
+We use the PCB Defect Detection Ultra dataset from Roboflow Universe.
+
+**Dataset:** https://universe.roboflow.com/cnn-pcb-defect-detection/pcb-defect-detection-ultra
+
+The model is trained using Python and the Ultralytics YOLO framework. We initialize YOLO26n using its model configuration and train it on the annotated PCB images.
+
+Our training configuration:
 
 | Parameter | Value |
 |---|---|
@@ -61,97 +69,133 @@ Our training configuration includes:
 | Epochs | 100 |
 | Image Size | 640 × 640 |
 | Batch Size | 4 |
-| Device | CPU |
+| Training Device | CPU |
 | Pretrained Weights | Disabled |
 
-The trained model is exported into NCNN format for deployment on Raspberry Pi 4.
+The trained model is prepared for deployment using two edge inference frameworks: NCNN and ExecuTorch.
 
-## Edge Deployment Using NCNN
+## 6. Edge Deployment Using NCNN and ExecuTorch
 
-Running a deep learning model on resource-constrained hardware requires an efficient inference framework. We use NCNN, a neural network inference framework designed for mobile and edge devices.
+Running deep learning models on Raspberry Pi 4 requires an inference runtime suitable for resource-constrained ARM-based hardware.
 
-The trained YOLO26n model is exported into two files:
+We explore two deployment frameworks:
 
-- `model.ncnn.param` contains the model architecture and layer configuration.
-- `model.ncnn.bin` contains the trained model weights.
+**NCNN**
 
-NCNN loads these files and performs inference directly on Raspberry Pi 4 using its ARM-based CPU. Our current implementation uses four CPU threads with Vulkan acceleration disabled.
+NCNN is a lightweight neural network inference framework optimized for mobile and embedded devices. It supports CPU-based inference and provides an efficient way to deploy trained models on ARM hardware.
 
-## Python Inference Pipeline
+Our NCNN deployment uses exported `.param` and `.bin` model files and performs inference using four CPU threads.
 
-The live detection implementation is available in `liveinference.py`.
+Documentation: https://github.com/Tencent/ncnn
 
-The complete process involves the following steps:
+**ExecuTorch**
 
-1. **Image Capture:** Picamera2 captures PCB images through the Raspberry Pi Camera.
-2. **Preprocessing:** OpenCV performs center cropping and resizing. The image is converted into NCNN format and normalized.
-3. **Inference:** The preprocessed image is passed to the trained YOLO26n model through NCNN.
-4. **Postprocessing:** Predictions are filtered using a confidence threshold, followed by Non-Maximum Suppression (NMS) to remove overlapping detections.
-5. **Visualization:** OpenCV draws bounding boxes and displays defect labels, confidence scores, FPS and inference time.
+ExecuTorch is Meta's open-source solution for running AI models on edge devices. It is built around the PyTorch ecosystem and provides a lightweight runtime for deploying models across different hardware platforms.
 
-**Training Pipeline**
+We also evaluate ExecuTorch as an alternative inference runtime for our Raspberry Pi-based PCB inspection system.
+
+Documentation: https://docs.pytorch.org/executorch/stable/
+
+The trained model is prepared for both NCNN and ExecuTorch deployment, allowing us to compare their performance at different input resolutions.
+
+## 7. Python Inference Pipeline
+
+The live inference implementation uses Raspberry Pi Camera, Picamera2, OpenCV, NumPy and the selected inference runtime.
+
+The process involves:
+
+1. Capturing PCB images through the Raspberry Pi Camera.
+2. Cropping and resizing images according to the model input resolution.
+3. Converting and normalizing images for model inference.
+4. Running the trained YOLO26n model using NCNN or ExecuTorch.
+5. Applying confidence filtering and Non-Maximum Suppression (NMS).
+6. Drawing bounding boxes and displaying defect labels and confidence scores.
+
+**Training and Deployment Flow**
 
 ```text
-PCB Dataset
-     |
-     v
-Data Preparation
-     |
-     v
+PCB Defect Dataset
+        |
+        v
+Dataset Preparation
+        |
+        v
 YOLO26n Training
-     |
-     v
-Model Validation
-     |
-     v
-Trained Weights
-     |
-     v
-NCNN Export
+        |
+        v
+Trained Model Weights
+        |
+        v
+Model Export
+        |
+        +------------------+
+        |                  |
+        v                  v
+      NCNN             ExecuTorch
+        |                  |
+        v                  v
+   Edge Inference     Edge Inference
+        |                  |
+        +--------+---------+
+                 |
+                 v
+          Defect Detection
 ```
 
-**Live Inference Pipeline**
+## 8. Performance Benchmark
 
-```text
-Raspberry Pi Camera
-     |
-     v
-Image Capture
-     |
-     v
-Preprocessing
-     |
-     v
-NCNN Inference
-     |
-     v
-Defect Detection
-     |
-     v
-Confidence Filtering and NMS
-     |
-     v
-Bounding Box Visualization
-```
+We evaluated both inference frameworks on Raspberry Pi 4 at two different input resolutions.
 
-## Performance and Limitations
+| S.No. | Runtime | Resolution | Framerate (FPS) | Latency (ms) |
+|---:|---|---:|---:|---:|
+| 1 | NCNN | 640 × 640 | 1.7 | 588.2 |
+| 2 | NCNN | 480 × 480 | 3.6 | 277.8 |
+| 3 | ExecuTorch | 640 × 640 | 1.9 | 526.3 |
+| 4 | ExecuTorch | 480 × 480 | 3.7 | 270.3 |
 
-The current system performs inference locally on Raspberry Pi 4. However, the FPS is relatively low due to the limited computational resources of the ARM-based CPU and the absence of dedicated AI acceleration hardware.
+Latency is calculated approximately as:
 
-Improving inference speed through model optimization, quantization and compatible hardware acceleration is an important area for future development.
+`Latency (ms) = 1000 / FPS`
 
-## Technologies Used
+The results show that reducing the input resolution from 640 × 640 to 480 × 480 improves the processing speed for both frameworks.
 
-Python, YOLO26n, Ultralytics, PyTorch, NCNN, OpenCV, NumPy, Picamera2, Raspberry Pi 4 and Roboflow.
+ExecuTorch achieves slightly higher FPS in both comparisons based on our reported measurements.
 
-## References
+**Note:** These are the supplied benchmark results. Latency represents approximate frame time derived from FPS, not independently measured model-only execution latency.
 
-- Dataset: https://universe.roboflow.com/cnn-pcb-defect-detection/pcb-defect-detection-ultra
+## 9. Limitations and Future Improvements
+
+The current system achieves relatively low FPS because Raspberry Pi 4 has limited computational resources and our implementation does not use dedicated AI acceleration hardware.
+
+Future improvements include model quantization, inference optimization, hardware acceleration and better camera positioning and lighting conditions.
+
+Our goal is to develop a practical and affordable edge-AI inspection system that can assist quality-control operators in identifying manufacturing defects.
+
+## 10. Technologies Used
+
+- Python
+- YOLO26n
+- Ultralytics
+- PyTorch
+- NCNN
+- ExecuTorch
+- OpenCV
+- NumPy
+- Picamera2
+- Raspberry Pi 4
+- Roboflow Universe
+
+## 11. References
+
+- PCB Defect Detection Dataset: https://universe.roboflow.com/cnn-pcb-defect-detection/pcb-defect-detection-ultra
+- Ultralytics Documentation: https://docs.ultralytics.com/
+- ExecuTorch Documentation: https://docs.pytorch.org/executorch/stable/
+- NCNN Documentation: https://github.com/Tencent/ncnn
+- Raspberry Pi Documentation: https://www.raspberrypi.com/documentation/
 - YOLO Research Paper: https://arxiv.org/abs/1506.02640
-- Ultralytics: https://docs.ultralytics.com/
-- NCNN: https://github.com/Tencent/ncnn
-- Raspberry Pi: https://www.raspberrypi.com/documentation/
 
 **Repository:** https://github.com/ridhammishra/pcbfaultdetector
 
-*Our objective is to make PCB quality inspection more accessible by combining deep learning with affordable edge-computing hardware, helping identify manufacturing defects more efficiently.*
+Developed under the Manufacturing and Industry 4.0 theme.
+
+Our objective is to bring affordable AI-powered visual inspection closer to the manufacturing floor, helping make PCB quality control more efficient and reliable.
