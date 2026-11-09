@@ -42,7 +42,7 @@ Our model is trained to detect six PCB defect categories.
 
 The following images illustrate the six types of manufacturing defects considered in our project.
 
-![PCB Defect Categories](pcb-defect-categories.png)
+![PCB Defect Categories](Diagram-of-6-common-types-of-PCB-defect-displays.png)
 
 The model detects:
 
